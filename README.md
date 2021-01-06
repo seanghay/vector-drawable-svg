@@ -1,6 +1,3 @@
-# Convert Android VectorDrawable to SVG
-
-
 ## Installation & Usage
 
 Install
