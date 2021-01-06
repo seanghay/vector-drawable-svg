@@ -1,0 +1,37 @@
+{
+  "name": "vector-drawable-svg",
+  "version": "1.0.2",
+  "description": "Convert Androd VectorDrawable to SVG",
+  "main": "src/vector-drawable-svg.js",
+  "bin": {
+    "vd2svg": "bin/vd2svg.js"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watchAll"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seanghay/vector-drawable-svg.git"
+  },
+  "keywords": [
+    "android",
+    "vectordrawable",
+    "svg"
+  ],
+  "author": "Seanghay Yath <seanghay.dev@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/seanghay/vector-drawable-svg/issues"
+  },
+  "homepage": "https://github.com/seanghay/vector-drawable-svg#readme",
+  "devDependencies": {
+    "@types/jest": "^26.0.19",
+    "@types/xmldom": "^0.1.30",
+    "jest": "^26.6.3"
+  },
+  "dependencies": {
+    "xml-formatter": "^2.4.0",
+    "xmldom": "^0.4.0"
+  }
+}
