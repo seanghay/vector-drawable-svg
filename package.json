@@ -6,6 +6,11 @@
   "bin": {
     "vd2svg": "bin/vd2svg.js"
   },
+
+  "files": [
+    "bin",
+    "src"
+  ],
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watchAll"
