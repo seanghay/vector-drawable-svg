@@ -1,12 +1,11 @@
 {
   "name": "vector-drawable-svg",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Convert Androd VectorDrawable to SVG",
   "main": "src/vector-drawable-svg.js",
   "bin": {
     "vd2svg": "bin/vd2svg.js"
   },
-
   "files": [
     "bin",
     "src"
