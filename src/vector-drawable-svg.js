@@ -1,14 +1,16 @@
 const { DOMParser, XMLSerializer } = require("@xmldom/xmldom");
 
 const attributesMap = {
-  "android:pathData": "d",
-  "android:fillColor": "fill",
-  "android:strokeLineJoin": "stroke-linejoin",
-  "android:strokeLineCap": "stroke-linecap",
-  "android:strokeMiterLimit": "stroke-miterlimit",
-  "android:strokeWidth": "stroke-width",
-  "android:strokeColor": "stroke",
-  "android:fillType": "fill-rule",
+    "android:pathData": "d",
+    "android:fillColor": "fill",
+    "android:strokeLineJoin": "stroke-linejoin",
+    "android:strokeLineCap": "stroke-linecap",
+    "android:strokeMiterLimit": "stroke-miterlimit",
+    "android:strokeWidth": "stroke-width",
+    "android:strokeColor": "stroke",
+    "android:fillType": "fill-rule",
+    "android:fillAlpha": "fill-opacity",
+    "android:strokeAlpha": "stroke-opacity"
 };
 
 const attributeTransforms = {
@@ -31,12 +33,12 @@ function parsePath(root, pathNode) {
     svgPath.setAttribute("fill", "none");
 
     Array.from(pathNode.attributes).forEach((attr) => {
-      const svgAttrName = attributesMap[attr.name];
-      const transformer = attributeTransforms[attr.name];
-      if (svgAttrName) {
-        const svgAttrValue = transformer ? transformer(attr.value) : attr.value;
-        svgPath.setAttribute(svgAttrName, svgAttrValue);
-      }
+        const svgAttrName = attributesMap[attr.name];
+        const transformer = attributeTransforms[attr.name];
+        if (svgAttrName) {
+            const svgAttrValue = transformer ? transformer(attr.value) : attr.value;
+            svgPath.setAttribute(svgAttrName, svgAttrValue);
+        }
     });
 
     return svgPath;
@@ -50,12 +52,12 @@ function transformNode(node, parent, root, defs) {
 
     if (node.tagName === 'group') {
         const groupNode = root.createElement('g');
-        
+
         const attrs = new Map();
         Array.from(node.attributes).forEach(attr => {
             const svgAttr = groupAttrsMap[attr.name];
             if (svgAttr.transform) {
-                const prevTransform = attrs['transform'] || {};                
+                const prevTransform = attrs['transform'] || {};
                 prevTransform[svgAttr.transform] = attr.value;
                 attrs.set('transform', prevTransform);
 
@@ -63,7 +65,7 @@ function transformNode(node, parent, root, defs) {
                 attrs.set(svgAttr, attr.value);
             }
         });
-        
+
         if (attrs.size > 0) {
             const transforms = attrs.get('transform');
             if (transforms) {
@@ -73,19 +75,19 @@ function transformNode(node, parent, root, defs) {
 
 
                 const pivotX = transforms.pivotX || 0;
-                const pivotY = transforms.pivotY || 0;                
+                const pivotY = transforms.pivotY || 0;
                 const hasPivot = pivotX !== 0 || pivotY !== 0
 
 
                 const translateX = transforms.translateX || 0;
                 const translateY = transforms.translateY || 0;
                 const hasTranslation = translateX !== 0 || translateY !== 0
-                
+
                 const rotation = transforms.pivotY || 0;
                 const hasRotation = rotation !== 0;
 
                 const t = [];
-        
+
                 if (hasScale) {
                     t.push(`scale(${scaleX}, ${scaleY})`);
                 }
@@ -101,11 +103,11 @@ function transformNode(node, parent, root, defs) {
                 if (hasPivot) {
                     // TODO: Have no idea for now :(
                 }
-                
+
                 if (t.length) {
                     groupNode.setAttribute('transform', t.join(' '));
                 }
-                attrs.delete('transform');    
+                attrs.delete('transform');
             }
 
             attrs.forEach((value, key) => {
@@ -114,7 +116,7 @@ function transformNode(node, parent, root, defs) {
         }
 
         let prevClipPathId = null;
-    
+
         Array.from(node.childNodes).forEach(it => {
             const childPath = transformNode(it, node, root);
 
@@ -138,7 +140,7 @@ function transformNode(node, parent, root, defs) {
                 groupNode.appendChild(childPath);
             }
         });
-        
+
         return groupNode;
     }
 
@@ -177,65 +179,65 @@ function removeDimenSuffix(dimen) {
 function transform(content, options) {
 
     const parser = new DOMParser();
-  const doc = parser.parseFromString(content);
+    const doc = parser.parseFromString(content);
 
-  const vectorDrawables = doc.getElementsByTagName("vector");
-  if (vectorDrawables.length !== 1) {
-    throw new Error("VectorDrawable is invalid");
-  }
-
-  const vectorDrawable = vectorDrawables[0];
-  
-  const viewportWidth = vectorDrawable.getAttribute("android:viewportWidth");
-  const viewportHeight = vectorDrawable.getAttribute("android:viewportHeight");
-
-  const outputWidth = removeDimenSuffix(vectorDrawable.getAttribute('android:width')) 
-  const outputHeight = removeDimenSuffix(vectorDrawable.getAttribute('android:height'));
-
-  const svgNode = doc.createElement("svg");
-
-  svgNode.setAttribute('id', 'vector')
-  svgNode.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  svgNode.setAttribute("width", outputWidth || viewportWidth);
-  svgNode.setAttribute("height", outputHeight || viewportHeight);
-  svgNode.setAttribute("viewBox", `0 0 ${viewportWidth} ${viewportHeight}`);
-
-  const childrenNodes = Array.from(doc.documentElement.childNodes).filter(it => it.tagName);
-
-  const defsNode = doc.createElement('defs');
-  const nodes = childrenNodes.map(it => transformNode(it, doc.documentElement, doc, defsNode));
-
-  if (defsNode.childNodes.length) {
-    svgNode.appendChild(defsNode);
-  }
-
-  const nodeIndices = {
-      g: 0,
-      path: 0,
-  }
-
-  nodes.forEach(node => {
-    const id = node.getAttribute('id');
-    
-    const currentId = nodeIndices[node.tagName];
-    if (typeof currentId === 'number') {
-        nodeIndices[node.tagName] = currentId + 1;
+    const vectorDrawables = doc.getElementsByTagName("vector");
+    if (vectorDrawables.length !== 1) {
+        throw new Error("VectorDrawable is invalid");
     }
 
-    node.setAttribute('id', id || `${node.tagName}_${currentId}`);
-    svgNode.appendChild(node);
+    const vectorDrawable = vectorDrawables[0];
 
-  });
+    const viewportWidth = vectorDrawable.getAttribute("android:viewportWidth");
+    const viewportHeight = vectorDrawable.getAttribute("android:viewportHeight");
 
-  const serializer = new XMLSerializer();
-  const svgString = serializer.serializeToString(svgNode);
+    const outputWidth = removeDimenSuffix(vectorDrawable.getAttribute('android:width'))
+    const outputHeight = removeDimenSuffix(vectorDrawable.getAttribute('android:height'));
 
-  if (options) {
-    if (options.pretty) {
-        return require('xml-formatter')(svgString);
+    const svgNode = doc.createElement("svg");
+
+    svgNode.setAttribute('id', 'vector')
+    svgNode.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    svgNode.setAttribute("width", outputWidth || viewportWidth);
+    svgNode.setAttribute("height", outputHeight || viewportHeight);
+    svgNode.setAttribute("viewBox", `0 0 ${viewportWidth} ${viewportHeight}`);
+
+    const childrenNodes = Array.from(doc.documentElement.childNodes).filter(it => it.tagName);
+
+    const defsNode = doc.createElement('defs');
+    const nodes = childrenNodes.map(it => transformNode(it, doc.documentElement, doc, defsNode));
+
+    if (defsNode.childNodes.length) {
+        svgNode.appendChild(defsNode);
     }
-  }
-  return svgString;
+
+    const nodeIndices = {
+        g: 0,
+        path: 0,
+    }
+
+    nodes.forEach(node => {
+        const id = node.getAttribute('id');
+
+        const currentId = nodeIndices[node.tagName];
+        if (typeof currentId === 'number') {
+            nodeIndices[node.tagName] = currentId + 1;
+        }
+
+        node.setAttribute('id', id || `${node.tagName}_${currentId}`);
+        svgNode.appendChild(node);
+
+    });
+
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(svgNode);
+
+    if (options) {
+        if (options.pretty) {
+            return require('xml-formatter')(svgString);
+        }
+    }
+    return svgString;
 }
 
 module.exports = {
