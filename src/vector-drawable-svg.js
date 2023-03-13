@@ -1,4 +1,4 @@
-const { DOMParser, XMLSerializer } = require("xmldom");
+const { DOMParser, XMLSerializer } = require("@xmldom/xmldom");
 
 const attributesMap = {
   "android:pathData": "d",

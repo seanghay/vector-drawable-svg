@@ -1,6 +1,6 @@
 {
   "name": "vector-drawable-svg",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Convert Androd VectorDrawable to SVG",
   "main": "src/vector-drawable-svg.js",
   "bin": {
@@ -26,12 +26,13 @@
   },
   "homepage": "https://github.com/seanghay/vector-drawable-svg#readme",
   "devDependencies": {
-    "@types/jest": "^26.0.19",
-    "@types/xmldom": "^0.1.30",
-    "jest": "^26.6.3"
+    "@types/jest": "^29.4.0",
+    "@types/xmldom": "^0.1.31",
+    "dom-compare": "^0.1.1",
+    "jest": "^29.5.0"
   },
   "dependencies": {
-    "xml-formatter": "^2.4.0",
-    "xmldom": "^0.4.0"
+    "@xmldom/xmldom": "^0.8.6",
+    "xml-formatter": "^3.3.2"
   }
 }
