@@ -15,6 +15,8 @@ const attributesMap = {
 
 const attributeTransforms = {
     'android:fillType': (value) => value && value.toLowerCase(),
+    'android:fillColor': convertHexColor,
+    'android:strokeColor': convertHexColor,
 }
 
 const groupAttrsMap = {
@@ -173,6 +175,28 @@ function removeDimenSuffix(dimen) {
         return dimen.substring(0, dimen.length - 2);
     }
     return dimen;
+}
+
+function convertHexColor(argb) {
+    const digits = argb.replace(/^#/, '');
+
+    if (digits.length !== 4 && digits.length !== 8) {
+        return argb;
+    }
+
+    let red, green, blue, alpha;
+    if (digits.length === 4) {
+        alpha = digits[0];
+        red = digits[1];
+        green = digits[2];
+        blue = digits[3];
+    } else {
+        alpha = digits.substr(0, 2);
+        red = digits.substr(2, 2);
+        green = digits.substr(4, 2);
+        blue = digits.substr(6, 2);
+    }
+    return '#' + red + green + blue + alpha;
 }
 
 
