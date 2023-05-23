@@ -1,8 +1,6 @@
 const { transform } = require('..');
 const path = require('path');
 const fs = require('fs');
-const xmlcompare = require('dom-compare').compare;
-
 
 const vectorDrawablesDir = path.join(__dirname, 'drawables');
 const svgsDir = path.join(__dirname, 'svgs');
@@ -23,5 +21,3 @@ fs.readdirSync(vectorDrawablesDir).forEach(filename => {
         expect(svgContent).toBe(outputSVG);
     });
 })
-
-
