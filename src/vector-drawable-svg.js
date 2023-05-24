@@ -200,7 +200,7 @@ function convertHexColor(argb) {
 }
 
 
-function transform(content, options) {
+exports.transform = function(content, options) {
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(content);
@@ -262,8 +262,4 @@ function transform(content, options) {
         }
     }
     return svgString;
-}
-
-module.exports = {
-    transform,
 }
