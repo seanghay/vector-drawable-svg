@@ -68,7 +68,7 @@ function parsePath(root, pathNode) {
 function parseGradient(root, gradientNode) {
     const type = gradientNode.getAttribute('android:type');
 
-    const svgGradient = function(type) {
+    const svgGradient = function (type) {
         switch (type) {
             case 'linear':
                 return root.createElement("linearGradient");
@@ -298,7 +298,7 @@ function convertHexColor(argb) {
 }
 
 
-exports.transform = function(content, options) {
+exports.transform = function (content, options) {
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(content);
