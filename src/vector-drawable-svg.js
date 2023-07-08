@@ -30,6 +30,25 @@ const groupAttrsMap = {
     'android:translateY': { transform: 'translateY' },
 }
 
+const gradientAttrsMap = {
+    "android:startX": "x1",
+    "android:startY": "y1",
+    "android:endX": "x2",
+    "android:endY": "y2",
+    "android:centerX": "cx",
+    "android:centerY": "cy",
+    "android:gradientRadius": "r",
+}
+
+const gradientItemAttrsMap = {
+    "android:color": "stop-color",
+    "android:offset": "offset",
+}
+
+const gradientItemAttrsTransforms = {
+    'android:color': convertHexColor,
+}
+
 function parsePath(root, pathNode) {
     const svgPath = root.createElement("path");
     svgPath.setAttribute("fill", "none");
@@ -46,10 +65,89 @@ function parsePath(root, pathNode) {
     return svgPath;
 }
 
+function parseGradient(root, gradientNode) {
+    const type = gradientNode.getAttribute('android:type');
+
+    const svgGradient = function(type) {
+        switch (type) {
+            case 'linear':
+                return root.createElement("linearGradient");
+            case 'radial':
+                return root.createElement("radialGradient");
+            case 'sweep':
+                throw new Error("Sweep gradient is not compatible by SVG");
+            default:
+                throw new Error("invalid gradient type");
+        }
+    }(type);
+
+    svgGradient.setAttribute('gradientUnits', 'userSpaceOnUse');
+
+    Array.from(gradientNode.attributes).forEach((attr) => {
+        const svgAttrName = gradientAttrsMap[attr.name];
+        if (svgAttrName) {
+            const svgAttrValue = attr.value;
+            svgGradient.setAttribute(svgAttrName, svgAttrValue);
+        }
+    });
+
+    Array.from(gradientNode.childNodes).forEach(it => {
+        if (it.tagName === 'item') {
+            const svgGradientStop = root.createElement('stop');
+
+            Array.from(it.attributes).forEach((attr) => {
+                const svgAttrName = gradientItemAttrsMap[attr.name];
+                const transformer = gradientItemAttrsTransforms[attr.name];
+                if (svgAttrName) {
+                    const svgAttrValue = transformer ? transformer(attr.value) : attr.value;
+                    svgGradientStop.setAttribute(svgAttrName, svgAttrValue);
+                }
+            });
+
+            svgGradient.appendChild(svgGradientStop);
+        }
+    });
+
+    return svgGradient;
+}
+
 function transformNode(node, parent, root, defs) {
 
     if (node.tagName === 'path') {
-        return parsePath(root, node);
+        const svgPath = parsePath(root, node);
+
+        Array.from(node.childNodes).forEach(it => {
+            if (it.tagName === 'aapt:attr') {
+                const attrName = it.getAttribute('name');
+                switch (attrName) {
+                    case 'android:fillColor':
+                    case 'android:strokeColor':
+
+                        Array.from(it.childNodes).forEach(childNode => {
+                            if (childNode.tagName === 'gradient') {
+                                const svgGradient = parseGradient(root, childNode);
+
+                                if (svgGradient) {
+                                    const size = defs.childNodes.length;
+                                    const gradientId = `gradient_${size}`;
+
+                                    svgGradient.setAttribute('id', gradientId);
+                                    defs.appendChild(svgGradient);
+
+                                    const svgAttrName = attributesMap[attrName];
+                                    svgPath.setAttribute(svgAttrName, `url(#${gradientId})`);
+                                }
+                            }
+                        });
+
+                        break;
+                    default:
+                        break;
+                }
+            }
+        });
+
+        return svgPath;
     }
 
     if (node.tagName === 'group') {
