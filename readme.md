@@ -8,7 +8,13 @@ npm install vector-drawable-svg
 
 ```js
 const { transform } = require('vector-drawable-svg');
-const svgContent = transform(vectorDrawbleContent);
+
+const svgContent = transform(vectorDrawbleContent, {
+	pretty: true,
+	override: {
+		'@color/colorPrimary': '#00ff00',
+		'@color/colorSecondary': '#00ff00',
+	});
 ```
 
 Using on Bash

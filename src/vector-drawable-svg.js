@@ -1,363 +1,391 @@
 const { DOMParser, XMLSerializer } = require("@xmldom/xmldom");
 
 const attributesMap = {
-    "android:pathData": "d",
-    "android:fillColor": "fill",
-    "android:strokeLineJoin": "stroke-linejoin",
-    "android:strokeLineCap": "stroke-linecap",
-    "android:strokeMiterLimit": "stroke-miterlimit",
-    "android:strokeWidth": "stroke-width",
-    "android:strokeColor": "stroke",
-    "android:fillType": "fill-rule",
-    "android:fillAlpha": "fill-opacity",
-    "android:strokeAlpha": "stroke-opacity"
+	"android:pathData": "d",
+	"android:fillColor": "fill",
+	"android:strokeLineJoin": "stroke-linejoin",
+	"android:strokeLineCap": "stroke-linecap",
+	"android:strokeMiterLimit": "stroke-miterlimit",
+	"android:strokeWidth": "stroke-width",
+	"android:strokeColor": "stroke",
+	"android:fillType": "fill-rule",
+	"android:fillAlpha": "fill-opacity",
+	"android:strokeAlpha": "stroke-opacity"
 };
 
 const attributeTransforms = {
-    'android:fillType': (value) => value && value.toLowerCase(),
-    'android:fillColor': convertHexColor,
-    'android:strokeColor': convertHexColor,
+	'android:fillType': (value) => value && value.toLowerCase(),
+	'android:fillColor': convertHexColor,
+	'android:strokeColor': convertHexColor,
 }
 
 const groupAttrsMap = {
-    'android:name': 'id',
-    'android:pivotX': { transform: 'pivotX' },
-    'android:pivotY': { transform: 'pivotX' },
-    'android:rotation': { transform: 'rotation' },
-    'android:scaleX': { transform: 'scaleX' },
-    'android:scaleY': { transform: 'scaleY' },
-    'android:translateX': { transform: 'translateX' },
-    'android:translateY': { transform: 'translateY' },
+	'android:name': 'id',
+	'android:pivotX': { transform: 'pivotX' },
+	'android:pivotY': { transform: 'pivotX' },
+	'android:rotation': { transform: 'rotation' },
+	'android:scaleX': { transform: 'scaleX' },
+	'android:scaleY': { transform: 'scaleY' },
+	'android:translateX': { transform: 'translateX' },
+	'android:translateY': { transform: 'translateY' },
 }
 
 const gradientAttrsMap = {
-    "android:startX": "x1",
-    "android:startY": "y1",
-    "android:endX": "x2",
-    "android:endY": "y2",
-    "android:centerX": "cx",
-    "android:centerY": "cy",
-    "android:gradientRadius": "r",
+	"android:startX": "x1",
+	"android:startY": "y1",
+	"android:endX": "x2",
+	"android:endY": "y2",
+	"android:centerX": "cx",
+	"android:centerY": "cy",
+	"android:gradientRadius": "r",
 }
 
 const gradientItemAttrsMap = {
-    "android:color": "stop-color",
-    "android:offset": "offset",
+	"android:color": "stop-color",
+	"android:offset": "offset",
 }
 
 const gradientItemAttrsTransforms = {
-    'android:color': convertHexColor,
+	'android:color': convertHexColor,
 }
 
 function parsePath(root, pathNode) {
-    const svgPath = root.createElement("path");
-    svgPath.setAttribute("fill", "none");
+	const svgPath = root.createElement("path");
+	svgPath.setAttribute("fill", "none");
 
-    Array.from(pathNode.attributes).forEach((attr) => {
-        const svgAttrName = attributesMap[attr.name];
-        const transformer = attributeTransforms[attr.name];
-        if (svgAttrName) {
-            const svgAttrValue = transformer ? transformer(attr.value) : attr.value;
-            svgPath.setAttribute(svgAttrName, svgAttrValue);
-        }
-    });
+	Array.from(pathNode.attributes).forEach((attr) => {
+		const svgAttrName = attributesMap[attr.name];
+		const transformer = attributeTransforms[attr.name];
+		if (svgAttrName) {
+			const svgAttrValue = transformer ? transformer(attr.value) : attr.value;
+			svgPath.setAttribute(svgAttrName, svgAttrValue);
+		}
+	});
 
-    return svgPath;
+	return svgPath;
 }
 
 function parseGradient(root, gradientNode) {
-    const type = gradientNode.getAttribute('android:type');
+	const type = gradientNode.getAttribute('android:type');
 
-    const svgGradient = function (type) {
-        switch (type) {
-            case 'linear':
-                return root.createElement("linearGradient");
-            case 'radial':
-                return root.createElement("radialGradient");
-            case 'sweep':
-                throw new Error("Sweep gradient is not compatible by SVG");
-            default:
-                throw new Error("invalid gradient type");
-        }
-    }(type);
+	const svgGradient = function (type) {
+		switch (type) {
+			case 'linear':
+				return root.createElement("linearGradient");
+			case 'radial':
+				return root.createElement("radialGradient");
+			case 'sweep':
+				throw new Error("Sweep gradient is not compatible by SVG");
+			default:
+				throw new Error("invalid gradient type");
+		}
+	}(type);
 
-    svgGradient.setAttribute('gradientUnits', 'userSpaceOnUse');
+	svgGradient.setAttribute('gradientUnits', 'userSpaceOnUse');
 
-    Array.from(gradientNode.attributes).forEach((attr) => {
-        const svgAttrName = gradientAttrsMap[attr.name];
-        if (svgAttrName) {
-            const svgAttrValue = attr.value;
-            svgGradient.setAttribute(svgAttrName, svgAttrValue);
-        }
-    });
+	Array.from(gradientNode.attributes).forEach((attr) => {
+		const svgAttrName = gradientAttrsMap[attr.name];
+		if (svgAttrName) {
+			const svgAttrValue = attr.value;
+			svgGradient.setAttribute(svgAttrName, svgAttrValue);
+		}
+	});
 
-    Array.from(gradientNode.childNodes).forEach(it => {
-        if (it.tagName === 'item') {
-            const svgGradientStop = root.createElement('stop');
+	Array.from(gradientNode.childNodes).forEach(it => {
+		if (it.tagName === 'item') {
+			const svgGradientStop = root.createElement('stop');
 
-            Array.from(it.attributes).forEach((attr) => {
-                const svgAttrName = gradientItemAttrsMap[attr.name];
-                const transformer = gradientItemAttrsTransforms[attr.name];
-                if (svgAttrName) {
-                    const svgAttrValue = transformer ? transformer(attr.value) : attr.value;
-                    svgGradientStop.setAttribute(svgAttrName, svgAttrValue);
-                }
-            });
+			Array.from(it.attributes).forEach((attr) => {
+				const svgAttrName = gradientItemAttrsMap[attr.name];
+				const transformer = gradientItemAttrsTransforms[attr.name];
+				if (svgAttrName) {
+					const svgAttrValue = transformer ? transformer(attr.value) : attr.value;
+					svgGradientStop.setAttribute(svgAttrName, svgAttrValue);
+				}
+			});
 
-            svgGradient.appendChild(svgGradientStop);
-        }
-    });
+			svgGradient.appendChild(svgGradientStop);
+		}
+	});
 
-    return svgGradient;
+	return svgGradient;
 }
 
 function transformNode(node, parent, root, defs) {
 
-    if (node.tagName === 'path') {
-        const svgPath = parsePath(root, node);
+	if (node.tagName === 'path') {
+		const svgPath = parsePath(root, node);
 
-        Array.from(node.childNodes).forEach(it => {
-            if (it.tagName === 'aapt:attr') {
-                const attrName = it.getAttribute('name');
-                switch (attrName) {
-                    case 'android:fillColor':
-                    case 'android:strokeColor':
+		Array.from(node.childNodes).forEach(it => {
+			if (it.tagName === 'aapt:attr') {
+				const attrName = it.getAttribute('name');
+				switch (attrName) {
+					case 'android:fillColor':
+					case 'android:strokeColor':
 
-                        Array.from(it.childNodes).forEach(childNode => {
-                            if (childNode.tagName === 'gradient') {
-                                const svgGradient = parseGradient(root, childNode);
+						Array.from(it.childNodes).forEach(childNode => {
+							if (childNode.tagName === 'gradient') {
+								const svgGradient = parseGradient(root, childNode);
 
-                                if (svgGradient) {
-                                    const size = defs.childNodes.length;
-                                    const gradientId = `gradient_${size}`;
+								if (svgGradient) {
+									const size = defs.childNodes.length;
+									const gradientId = `gradient_${size}`;
 
-                                    svgGradient.setAttribute('id', gradientId);
-                                    defs.appendChild(svgGradient);
+									svgGradient.setAttribute('id', gradientId);
+									defs.appendChild(svgGradient);
 
-                                    const svgAttrName = attributesMap[attrName];
-                                    svgPath.setAttribute(svgAttrName, `url(#${gradientId})`);
-                                }
-                            }
-                        });
+									const svgAttrName = attributesMap[attrName];
+									svgPath.setAttribute(svgAttrName, `url(#${gradientId})`);
+								}
+							}
+						});
 
-                        break;
-                    default:
-                        break;
-                }
-            }
-        });
+						break;
+					default:
+						break;
+				}
+			}
+		});
 
-        return svgPath;
-    }
+		return svgPath;
+	}
 
-    if (node.tagName === 'group') {
-        const groupNode = root.createElement('g');
+	if (node.tagName === 'group') {
+		const groupNode = root.createElement('g');
 
-        const attrs = new Map();
-        Array.from(node.attributes).forEach(attr => {
-            const svgAttr = groupAttrsMap[attr.name];
-            if (svgAttr.transform) {
-                const prevTransform = attrs['transform'] || {};
-                prevTransform[svgAttr.transform] = attr.value;
-                attrs.set('transform', prevTransform);
+		const attrs = new Map();
+		Array.from(node.attributes).forEach(attr => {
+			const svgAttr = groupAttrsMap[attr.name];
+			if (svgAttr.transform) {
+				const prevTransform = attrs['transform'] || {};
+				prevTransform[svgAttr.transform] = attr.value;
+				attrs.set('transform', prevTransform);
 
-            } else {
-                attrs.set(svgAttr, attr.value);
-            }
-        });
+			} else {
+				attrs.set(svgAttr, attr.value);
+			}
+		});
 
-        if (attrs.size > 0) {
-            const transforms = attrs.get('transform');
-            if (transforms) {
-                const scaleX = transforms.scaleX || 0;
-                const scaleY = transforms.scaleY || 0;
-                const hasScale = scaleX !== 0 || scaleY !== 0
-
-
-                const pivotX = transforms.pivotX || 0;
-                const pivotY = transforms.pivotY || 0;
-                const hasPivot = pivotX !== 0 || pivotY !== 0
+		if (attrs.size > 0) {
+			const transforms = attrs.get('transform');
+			if (transforms) {
+				const scaleX = transforms.scaleX || 0;
+				const scaleY = transforms.scaleY || 0;
+				const hasScale = scaleX !== 0 || scaleY !== 0
 
 
-                const translateX = transforms.translateX || 0;
-                const translateY = transforms.translateY || 0;
-                const hasTranslation = translateX !== 0 || translateY !== 0
+				const pivotX = transforms.pivotX || 0;
+				const pivotY = transforms.pivotY || 0;
+				const hasPivot = pivotX !== 0 || pivotY !== 0
 
-                const rotation = transforms.pivotY || 0;
-                const hasRotation = rotation !== 0;
 
-                const t = [];
+				const translateX = transforms.translateX || 0;
+				const translateY = transforms.translateY || 0;
+				const hasTranslation = translateX !== 0 || translateY !== 0
 
-                if (hasScale) {
-                    t.push(`scale(${scaleX}, ${scaleY})`);
-                }
+				const rotation = transforms.pivotY || 0;
+				const hasRotation = rotation !== 0;
 
-                if (hasRotation) {
-                    t.push(`rotation(${rotation})`);
-                }
+				const t = [];
 
-                if (hasTranslation) {
-                    t.push(`translation(${translateX}, ${translateY})`);
-                }
+				if (hasScale) {
+					t.push(`scale(${scaleX}, ${scaleY})`);
+				}
 
-                if (hasPivot) {
-                    // TODO: Have no idea for now :(
-                }
+				if (hasRotation) {
+					t.push(`rotation(${rotation})`);
+				}
 
-                if (t.length) {
-                    groupNode.setAttribute('transform', t.join(' '));
-                }
-                attrs.delete('transform');
-            }
+				if (hasTranslation) {
+					t.push(`translation(${translateX}, ${translateY})`);
+				}
 
-            attrs.forEach((value, key) => {
-                groupNode.setAttribute(key, value);
-            })
-        }
+				if (hasPivot) {
+					// TODO: Have no idea for now :(
+				}
 
-        let prevClipPathId = null;
+				if (t.length) {
+					groupNode.setAttribute('transform', t.join(' '));
+				}
+				attrs.delete('transform');
+			}
 
-        Array.from(node.childNodes).forEach(it => {
-            const childPath = transformNode(it, node, root);
+			attrs.forEach((value, key) => {
+				groupNode.setAttribute(key, value);
+			})
+		}
 
-            if (childPath) {
-                const clipPathNode = childPath.clipPathNode
-                if (clipPathNode) {
-                    if (defs) {
-                        const size = defs.childNodes.length
-                        prevClipPathId = `clip_path_${size}`
-                        clipPathNode.setAttribute('id', prevClipPathId);
-                        defs.appendChild(clipPathNode);
-                    }
-                    return;
-                }
+		let prevClipPathId = null;
 
-                if (prevClipPathId) {
-                    childPath.setAttribute('clip-path', `url(#${prevClipPathId})`);
-                    prevClipPathId = null;
-                }
+		Array.from(node.childNodes).forEach(it => {
+			const childPath = transformNode(it, node, root);
 
-                groupNode.appendChild(childPath);
-            }
-        });
+			if (childPath) {
+				const clipPathNode = childPath.clipPathNode
+				if (clipPathNode) {
+					if (defs) {
+						const size = defs.childNodes.length
+						prevClipPathId = `clip_path_${size}`
+						clipPathNode.setAttribute('id', prevClipPathId);
+						defs.appendChild(clipPathNode);
+					}
+					return;
+				}
 
-        return groupNode;
-    }
+				if (prevClipPathId) {
+					childPath.setAttribute('clip-path', `url(#${prevClipPathId})`);
+					prevClipPathId = null;
+				}
 
-    if (node.tagName === 'clip-path') {
-        const pathData = node.getAttribute('android:pathData');
-        const svgClipPathNode = root.createElement('clipPath');
-        const path = root.createElement('path');
+				groupNode.appendChild(childPath);
+			}
+		});
 
-        path.setAttribute('d', pathData);
-        svgClipPathNode.appendChild(path);
+		return groupNode;
+	}
 
-        const n = new XMLSerializer().serializeToString(svgClipPathNode);
-        return { clipPathNode: svgClipPathNode }
-    }
+	if (node.tagName === 'clip-path') {
+		const pathData = node.getAttribute('android:pathData');
+		const svgClipPathNode = root.createElement('clipPath');
+		const path = root.createElement('path');
 
-    return null;
+		path.setAttribute('d', pathData);
+		svgClipPathNode.appendChild(path);
+
+		const n = new XMLSerializer().serializeToString(svgClipPathNode);
+		return { clipPathNode: svgClipPathNode }
+	}
+
+	return null;
 }
 
 function removeDimenSuffix(dimen) {
-    dimen = dimen.trim();
-    if (!dimen) {
-        return dimen;
-    }
+	dimen = dimen.trim();
 
-    if (!isNaN(+dimen)) {
-        return dimen;
-    }
+	if (!dimen) {
+		return dimen;
+	}
 
-    if (typeof dimen === 'string') {
-        return dimen.substring(0, dimen.length - 2);
-    }
-    return dimen;
+	if (!isNaN(+dimen)) {
+		return dimen;
+	}
+
+	if (typeof dimen === 'string') {
+		return dimen.substring(0, dimen.length - 2);
+	}
+
+	return dimen;
 }
 
 function convertHexColor(argb) {
-    const digits = argb.replace(/^#/, '');
+	const digits = argb.replace(/^#/, '');
 
-    if (digits.length !== 4 && digits.length !== 8) {
-        return argb;
-    }
+	if (digits.length !== 4 && digits.length !== 8) {
+		return argb;
+	}
 
-    let red, green, blue, alpha;
-    if (digits.length === 4) {
-        alpha = digits[0];
-        red = digits[1];
-        green = digits[2];
-        blue = digits[3];
-    } else {
-        alpha = digits.substr(0, 2);
-        red = digits.substr(2, 2);
-        green = digits.substr(4, 2);
-        blue = digits.substr(6, 2);
-    }
-    return '#' + red + green + blue + alpha;
+	let red, green, blue, alpha;
+	if (digits.length === 4) {
+		alpha = digits[0];
+		red = digits[1];
+		green = digits[2];
+		blue = digits[3];
+	} else {
+		alpha = digits.substr(0, 2);
+		red = digits.substr(2, 2);
+		green = digits.substr(4, 2);
+		blue = digits.substr(6, 2);
+	}
+	return '#' + red + green + blue + alpha;
 }
 
 
-exports.transform = function (content, options) {
+exports.transform = function (content, options = {}) {
+	const override = options.override
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(content);
 
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(content);
+	if (override && typeof override === 'object') {
 
-    const vectorDrawables = doc.getElementsByTagName("vector");
-    if (vectorDrawables.length !== 1) {
-        throw new Error("VectorDrawable is invalid");
-    }
+		function traverse(node, callback) {
+			callback(node)
 
-    const vectorDrawable = vectorDrawables[0];
+			if (node.childNodes) {
+				const children = node.childNodes;
+				for (let i = 0; i < children.length; i++) {
+					traverse(children[i], callback)
+				}
+			}
+		}
 
-    const viewportWidth = vectorDrawable.getAttribute("android:viewportWidth");
-    const viewportHeight = vectorDrawable.getAttribute("android:viewportHeight");
+		traverse(doc, node => {
+			if (!node.attributes) return
+			for (const attr of Array.from(node.attributes)) {
+				const attrValue = node.getAttribute(attr.name)
+				if (attrValue in override) {
+					node.setAttribute(attr.name, override[attrValue])
+				}
+			}
+		})
+	}
 
-    const outputWidth = removeDimenSuffix(vectorDrawable.getAttribute('android:width'))
-    const outputHeight = removeDimenSuffix(vectorDrawable.getAttribute('android:height'));
+	const vectorDrawables = doc.getElementsByTagName("vector");
+	if (vectorDrawables.length !== 1) {
+		throw new Error("VectorDrawable is invalid");
+	}
 
-    const svgNode = doc.createElement("svg");
+	const vectorDrawable = vectorDrawables[0];
 
-    svgNode.setAttribute('id', 'vector')
-    svgNode.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    svgNode.setAttribute("width", outputWidth || viewportWidth);
-    svgNode.setAttribute("height", outputHeight || viewportHeight);
-    svgNode.setAttribute("viewBox", `0 0 ${viewportWidth} ${viewportHeight}`);
+	const viewportWidth = vectorDrawable.getAttribute("android:viewportWidth");
+	const viewportHeight = vectorDrawable.getAttribute("android:viewportHeight");
 
-    const childrenNodes = Array.from(doc.documentElement.childNodes).filter(it => it.tagName);
+	const outputWidth = removeDimenSuffix(vectorDrawable.getAttribute('android:width'))
+	const outputHeight = removeDimenSuffix(vectorDrawable.getAttribute('android:height'));
 
-    const defsNode = doc.createElement('defs');
-    const nodes = childrenNodes.map(it => transformNode(it, doc.documentElement, doc, defsNode));
+	const svgNode = doc.createElement("svg");
 
-    if (defsNode.childNodes.length) {
-        svgNode.appendChild(defsNode);
-    }
+	svgNode.setAttribute('id', 'vector')
+	svgNode.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+	svgNode.setAttribute("width", outputWidth || viewportWidth);
+	svgNode.setAttribute("height", outputHeight || viewportHeight);
+	svgNode.setAttribute("viewBox", `0 0 ${viewportWidth} ${viewportHeight}`);
 
-    const nodeIndices = {
-        g: 0,
-        path: 0,
-    }
+	const childrenNodes = Array.from(doc.documentElement.childNodes).filter(it => it.tagName);
 
-    nodes.forEach(node => {
-        const id = node.getAttribute('id');
+	const defsNode = doc.createElement('defs');
+	const nodes = childrenNodes.map(it => transformNode(it, doc.documentElement, doc, defsNode));
 
-        const currentId = nodeIndices[node.tagName];
-        if (typeof currentId === 'number') {
-            nodeIndices[node.tagName] = currentId + 1;
-        }
+	if (defsNode.childNodes.length) {
+		svgNode.appendChild(defsNode);
+	}
 
-        node.setAttribute('id', id || `${node.tagName}_${currentId}`);
-        svgNode.appendChild(node);
+	const nodeIndices = {
+		g: 0,
+		path: 0,
+	}
 
-    });
+	nodes.forEach(node => {
+		const id = node.getAttribute('id');
 
-    const serializer = new XMLSerializer();
-    const svgString = serializer.serializeToString(svgNode);
+		const currentId = nodeIndices[node.tagName];
 
-    if (options) {
-        if (options.pretty) {
-            return require('xml-formatter')(svgString);
-        }
-    }
-    return svgString;
+		if (typeof currentId === 'number') {
+			nodeIndices[node.tagName] = currentId + 1;
+		}
+
+		node.setAttribute('id', id || `${node.tagName}_${currentId}`);
+		svgNode.appendChild(node);
+
+	});
+
+	const serializer = new XMLSerializer();
+	const svgString = serializer.serializeToString(svgNode);
+
+	if (options) {
+		if (options.pretty) {
+			return require('xml-formatter')(svgString);
+		}
+	}
+
+	return svgString;
 }
