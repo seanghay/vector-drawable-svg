@@ -11,8 +11,7 @@ describe("transform android resources to map", () => {
 				<color name="ucrop_color_toolbar">@color/colorPrimary</color>
 				<color name="ucrop_color_statusbar">@color/colorPrimaryDark</color>
 				<color name="ucrop_color_widget_active">@color/colorPrimary</color>
-		</resources>
-		`
+		</resources>`
 
 		const result = parseAndroidResource(input)
 		expect(result).toMatchObject({

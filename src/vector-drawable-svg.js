@@ -50,7 +50,9 @@ const gradientItemAttrsTransforms = {
 }
 
 /**
+ * Parse Android XML Resources and returns an object.
  * @param {string | undefined} value
+ * @returns {Object.<string, string>}
  */
 exports.parseAndroidResource = function (value) {
 	if (typeof value !== 'string') return;
@@ -58,7 +60,6 @@ exports.parseAndroidResource = function (value) {
 	const doc = parser.parseFromString(value)
 	const resourcesNode = doc.getElementsByTagName("resources")[0]
 	if (!resourcesNode) return;
-
 	const map = new Map()
 
 	for (let i = 0; i < resourcesNode.childNodes.length; i++) {
