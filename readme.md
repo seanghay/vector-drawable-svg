@@ -14,7 +14,7 @@ const svgContent = transform(vectorDrawbleContent, {
 	override: {
 		'@color/colorPrimary': '#00ff00',
 		'@color/colorSecondary': '#00ff00',
-		'?android:attr/textColorPrimary': 'white'
+		'?android:attr/textColorPrimary': 'white',
 	});
 ```
 

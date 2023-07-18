@@ -49,6 +49,39 @@ const gradientItemAttrsTransforms = {
 	'android:color': convertHexColor,
 }
 
+/**
+ * @param {string | undefined} value
+ */
+exports.parseAndroidResource = function (value) {
+	if (typeof value !== 'string') return;
+	const parser = new DOMParser()
+	const doc = parser.parseFromString(value)
+	const resourcesNode = doc.getElementsByTagName("resources")[0]
+	if (!resourcesNode) return;
+
+	const map = new Map()
+
+	for (let i = 0; i < resourcesNode.childNodes.length; i++) {
+		const node = resourcesNode.childNodes[i];
+		if (node.nodeType !== 1) continue // if the current node is not Element, continue
+		if (node.firstChild.nodeType !== 3) continue; // if the first child is not TextNode, continue
+		const key = `@${node.tagName}/${node.getAttribute("name")}`
+		const value = node.textContent
+		map.set(key, value)
+	}
+
+	// resolve references
+	for (const [key, value] of map.entries()) {
+		if (/\@\w+\/\w+/g.test(value)) {
+			if (map.has(value)) {
+				map.set(key, map.get(value))
+			}
+		}
+	}
+
+	return Object.fromEntries(map.entries())
+}
+
 function parsePath(root, pathNode) {
 	const svgPath = root.createElement("path");
 	svgPath.setAttribute("fill", "none");
