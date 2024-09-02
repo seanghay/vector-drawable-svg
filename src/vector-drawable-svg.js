@@ -22,7 +22,7 @@ const attributeTransforms = {
 const groupAttrsMap = {
 	'android:name': 'id',
 	'android:pivotX': { transform: 'pivotX' },
-	'android:pivotY': { transform: 'pivotX' },
+	'android:pivotY': { transform: 'pivotY' },
 	'android:rotation': { transform: 'rotation' },
 	'android:scaleX': { transform: 'scaleX' },
 	'android:scaleY': { transform: 'scaleY' },
@@ -191,7 +191,7 @@ function transformNode(node, parent, root, defs) {
 		Array.from(node.attributes).forEach(attr => {
 			const svgAttr = groupAttrsMap[attr.name];
 			if (svgAttr.transform) {
-				const prevTransform = attrs['transform'] || {};
+				const prevTransform = attrs.get('transform') || {};
 				prevTransform[svgAttr.transform] = attr.value;
 				attrs.set('transform', prevTransform);
 
@@ -203,35 +203,34 @@ function transformNode(node, parent, root, defs) {
 		if (attrs.size > 0) {
 			const transforms = attrs.get('transform');
 			if (transforms) {
-				const scaleX = transforms.scaleX || 0;
-				const scaleY = transforms.scaleY || 0;
-				const hasScale = scaleX !== 0 || scaleY !== 0
+				const scaleX = transforms.scaleX || 1;
+				const scaleY = transforms.scaleY || 1;
+				const hasScale = scaleX !== 1 || scaleY !== 1
 
 
 				const pivotX = transforms.pivotX || 0;
 				const pivotY = transforms.pivotY || 0;
 				const hasPivot = pivotX !== 0 || pivotY !== 0
 
-
 				const translateX = transforms.translateX || 0;
 				const translateY = transforms.translateY || 0;
 				const hasTranslation = translateX !== 0 || translateY !== 0
 
-				const rotation = transforms.pivotY || 0;
+				const rotation = transforms.rotation || 0;
 				const hasRotation = rotation !== 0;
 
 				const t = [];
 
-				if (hasScale) {
-					t.push(`scale(${scaleX}, ${scaleY})`);
+				if (hasTranslation) {
+					t.push(`translate(${translateX}, ${translateY})`);
 				}
 
 				if (hasRotation) {
-					t.push(`rotation(${rotation})`);
+					t.push(`rotate(${rotation})`);
 				}
 
-				if (hasTranslation) {
-					t.push(`translation(${translateX}, ${translateY})`);
+				if (hasScale) {
+					t.push(`scale(${scaleX}, ${scaleY})`);
 				}
 
 				if (hasPivot) {
