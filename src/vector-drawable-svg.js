@@ -1,53 +1,111 @@
 const { DOMParser, XMLSerializer } = require("@xmldom/xmldom");
 
-const attributesMap = {
-	"android:pathData": "d",
-	"android:fillColor": "fill",
-	"android:strokeLineJoin": "stroke-linejoin",
-	"android:strokeLineCap": "stroke-linecap",
-	"android:strokeMiterLimit": "stroke-miterlimit",
-	"android:strokeWidth": "stroke-width",
-	"android:strokeColor": "stroke",
-	"android:fillType": "fill-rule",
-	"android:fillAlpha": "fill-opacity",
-	"android:strokeAlpha": "stroke-opacity"
-};
+const pathTransformers = [
+	vdAttrs => {
+		return { d: vdAttrs['android:pathData'] };
+	},
+	vdAttrs => {
+		const [hex, alpha] = convertHexColor(
+			vdAttrs['android:fillColor'],
+			vdAttrs['android:fillAlpha']
+		);
+		return { fill: hex, 'fill-opacity': alpha !== 1 ? alpha : null };
+	},
+	vdAttrs => {
+		return { 'stroke-linejoin': vdAttrs['android:strokeLineJoin'] };
+	},
+	vdAttrs => {
+		return { 'stroke-linecap': vdAttrs['android:strokeLineCap'] };
+	},
+	vdAttrs => {
+		return { 'stroke-miterlimit': vdAttrs['android:strokeMiterLimit'] };
+	},
+	vdAttrs => {
+		const [hex, alpha] = convertHexColor(
+			vdAttrs['android:strokeColor'],
+			vdAttrs['android:strokeAlpha']
+		);
+		return { stroke: hex, 'stroke-opacity': alpha !== 1 ? alpha : null };
+	},
+	vdAttrs => {
+		return { 'stroke-width': vdAttrs['android:strokeWidth'] };
+	},
+	vdAttrs => {
+		return {
+			'fill-rule':
+				vdAttrs['android:fillType'] &&
+				vdAttrs['android:fillType'].toLowerCase(),
+		};
+	},
+];
 
-const attributeTransforms = {
-	'android:fillType': (value) => value && value.toLowerCase(),
-	'android:fillColor': convertHexColor,
-	'android:strokeColor': convertHexColor,
-}
+const groupTransformers = [
+	vdAttrs => {
+		return { id: vdAttrs['android:name'] };
+	},
+	vdAttrs => {
+		const t = [];
 
-const groupAttrsMap = {
-	'android:name': 'id',
-	'android:pivotX': { transform: 'pivotX' },
-	'android:pivotY': { transform: 'pivotY' },
-	'android:rotation': { transform: 'rotation' },
-	'android:scaleX': { transform: 'scaleX' },
-	'android:scaleY': { transform: 'scaleY' },
-	'android:translateX': { transform: 'translateX' },
-	'android:translateY': { transform: 'translateY' },
-}
+		const translateX = vdAttrs['android:translateX'] || 0;
+		const translateY = vdAttrs['android:translateY'] || 0;
+		if (translateX !== 0 || translateY !== 0) {
+			t.push(`translate(${translateX}, ${translateY})`);
+		}
 
-const gradientAttrsMap = {
-	"android:startX": "x1",
-	"android:startY": "y1",
-	"android:endX": "x2",
-	"android:endY": "y2",
-	"android:centerX": "cx",
-	"android:centerY": "cy",
-	"android:gradientRadius": "r",
-}
+		const rotation = vdAttrs['android:rotation'] || 0;
+		if (rotation !== 0) {
+			t.push(`rotate(${rotation})`);
+		}
 
-const gradientItemAttrsMap = {
-	"android:color": "stop-color",
-	"android:offset": "offset",
-}
+		const scaleX = vdAttrs['android:scaleX'] || 1;
+		const scaleY = vdAttrs['android:scaleY'] || 1;
+		if (scaleX !== 1 || scaleY !== 1) {
+			t.push(`scale(${scaleX}, ${scaleY})`);
+		}
 
-const gradientItemAttrsTransforms = {
-	'android:color': convertHexColor,
-}
+		const pivotX = vdAttrs['android:pivotX'] || 0;
+		const pivotY = vdAttrs['android:pivotY'] || 0;
+		if (pivotX !== 0 || pivotY !== 0) {
+			// TODO: Have no idea for now :(
+		}
+
+		return { transform: t.join(' ') || null };
+	},
+];
+
+const gradientTransformers = [
+	vdAttrs => {
+		return { x1: vdAttrs['android:startX'] };
+	},
+	vdAttrs => {
+		return { y1: vdAttrs['android:startY'] };
+	},
+	vdAttrs => {
+		return { x2: vdAttrs['android:endX'] };
+	},
+	vdAttrs => {
+		return { y2: vdAttrs['android:endY'] };
+	},
+	vdAttrs => {
+		return { cx: vdAttrs['android:centerX'] };
+	},
+	vdAttrs => {
+		return { cy: vdAttrs['android:centerY'] };
+	},
+	vdAttrs => {
+		return { r: vdAttrs['android:gradientRadius'] };
+	},
+];
+
+const gradientItemTransformers = [
+	vdAttrs => {
+		const [hex, alpha] = convertHexColor(vdAttrs['android:color']);
+		return { 'stop-color': hex, 'stop-opacity': alpha !== 1 ? alpha : null };
+	},
+	vdAttrs => {
+		return { offset: vdAttrs['android:offset'] };
+	},
+];
 
 /**
  * Parse Android XML Resources and returns an object.
@@ -83,18 +141,25 @@ exports.parseAndroidResource = function (value) {
 	return Object.fromEntries(map.entries())
 }
 
+function transformAttributes(vdNode, svgNode, transformers) {
+	const vdAttrs = Object.fromEntries(
+		Array.from(vdNode.attributes).map(attr => [attr.name, attr.value])
+	);
+	transformers.forEach(transformer => {
+		const svgAttrs = transformer(vdAttrs);
+		Object.entries(svgAttrs).forEach(([name, value]) => {
+			if (value !== undefined && value !== null) {
+				svgNode.setAttribute(name, value);
+			}
+		});
+	});
+}
+
 function parsePath(root, pathNode) {
 	const svgPath = root.createElement("path");
 	svgPath.setAttribute("fill", "none");
 
-	Array.from(pathNode.attributes).forEach((attr) => {
-		const svgAttrName = attributesMap[attr.name];
-		const transformer = attributeTransforms[attr.name];
-		if (svgAttrName) {
-			const svgAttrValue = transformer ? transformer(attr.value) : attr.value;
-			svgPath.setAttribute(svgAttrName, svgAttrValue);
-		}
-	});
+	transformAttributes(pathNode, svgPath, pathTransformers);
 
 	return svgPath;
 }
@@ -117,26 +182,13 @@ function parseGradient(root, gradientNode) {
 
 	svgGradient.setAttribute('gradientUnits', 'userSpaceOnUse');
 
-	Array.from(gradientNode.attributes).forEach((attr) => {
-		const svgAttrName = gradientAttrsMap[attr.name];
-		if (svgAttrName) {
-			const svgAttrValue = attr.value;
-			svgGradient.setAttribute(svgAttrName, svgAttrValue);
-		}
-	});
+	transformAttributes(gradientNode, svgGradient, gradientTransformers);
 
 	Array.from(gradientNode.childNodes).forEach(it => {
 		if (it.tagName === 'item') {
 			const svgGradientStop = root.createElement('stop');
 
-			Array.from(it.attributes).forEach((attr) => {
-				const svgAttrName = gradientItemAttrsMap[attr.name];
-				const transformer = gradientItemAttrsTransforms[attr.name];
-				if (svgAttrName) {
-					const svgAttrValue = transformer ? transformer(attr.value) : attr.value;
-					svgGradientStop.setAttribute(svgAttrName, svgAttrValue);
-				}
-			});
+			transformAttributes(it, svgGradientStop, gradientItemTransformers);
 
 			svgGradient.appendChild(svgGradientStop);
 		}
@@ -168,7 +220,8 @@ function transformNode(node, parent, root, defs) {
 									svgGradient.setAttribute('id', gradientId);
 									defs.appendChild(svgGradient);
 
-									const svgAttrName = attributesMap[attrName];
+									const svgAttrName =
+										attrName == 'android:fillColor' ? 'fill' : 'stroke';
 									svgPath.setAttribute(svgAttrName, `url(#${gradientId})`);
 								}
 							}
@@ -187,66 +240,7 @@ function transformNode(node, parent, root, defs) {
 	if (node.tagName === 'group') {
 		const groupNode = root.createElement('g');
 
-		const attrs = new Map();
-		Array.from(node.attributes).forEach(attr => {
-			const svgAttr = groupAttrsMap[attr.name];
-			if (svgAttr.transform) {
-				const prevTransform = attrs.get('transform') || {};
-				prevTransform[svgAttr.transform] = attr.value;
-				attrs.set('transform', prevTransform);
-
-			} else {
-				attrs.set(svgAttr, attr.value);
-			}
-		});
-
-		if (attrs.size > 0) {
-			const transforms = attrs.get('transform');
-			if (transforms) {
-				const scaleX = transforms.scaleX || 1;
-				const scaleY = transforms.scaleY || 1;
-				const hasScale = scaleX !== 1 || scaleY !== 1
-
-
-				const pivotX = transforms.pivotX || 0;
-				const pivotY = transforms.pivotY || 0;
-				const hasPivot = pivotX !== 0 || pivotY !== 0
-
-				const translateX = transforms.translateX || 0;
-				const translateY = transforms.translateY || 0;
-				const hasTranslation = translateX !== 0 || translateY !== 0
-
-				const rotation = transforms.rotation || 0;
-				const hasRotation = rotation !== 0;
-
-				const t = [];
-
-				if (hasTranslation) {
-					t.push(`translate(${translateX}, ${translateY})`);
-				}
-
-				if (hasRotation) {
-					t.push(`rotate(${rotation})`);
-				}
-
-				if (hasScale) {
-					t.push(`scale(${scaleX}, ${scaleY})`);
-				}
-
-				if (hasPivot) {
-					// TODO: Have no idea for now :(
-				}
-
-				if (t.length) {
-					groupNode.setAttribute('transform', t.join(' '));
-				}
-				attrs.delete('transform');
-			}
-
-			attrs.forEach((value, key) => {
-				groupNode.setAttribute(key, value);
-			})
-		}
+		transformAttributes(node, groupNode, groupTransformers);
 
 		let prevClipPathId = null;
 
@@ -310,26 +304,30 @@ function removeDimenSuffix(dimen) {
 	return dimen;
 }
 
-function convertHexColor(argb) {
-	const digits = argb.replace(/^#/, '');
+function convertHexColor(argb, opacityStr = '1') {
+	const digits = argb && argb.replace(/^#/, '');
+	const opacity = parseFloat(opacityStr);
 
-	if (digits.length !== 4 && digits.length !== 8) {
-		return argb;
+	if (!digits || (digits.length !== 4 && digits.length !== 8)) {
+		return [argb, opacity];
 	}
 
 	let red, green, blue, alpha;
 	if (digits.length === 4) {
-		alpha = digits[0];
+		alpha = parseInt(digits[0].repeat(2), 16) / 255;
 		red = digits[1];
 		green = digits[2];
 		blue = digits[3];
 	} else {
-		alpha = digits.substr(0, 2);
+		alpha = parseInt(digits.substr(0, 2), 16) / 255;
 		red = digits.substr(2, 2);
 		green = digits.substr(4, 2);
 		blue = digits.substr(6, 2);
 	}
-	return '#' + red + green + blue + alpha;
+	return [
+		'#' + red + green + blue,
+		(Number.isFinite(alpha) ? alpha : 1) * opacity,
+	];
 }
 
 
