@@ -28,6 +28,3 @@ if (fs.existsSync(outputFile)) {
 const content = transform(fs.readFileSync(inPath, 'utf8'));
 
 fs.writeFileSync(outPath, content, { encoding: 'utf8' });
-
-
-
