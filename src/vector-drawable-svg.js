@@ -251,7 +251,7 @@ function transformNode(node, parent, root, defs) {
 		let prevClipPathId = null;
 
 		Array.from(node.childNodes).forEach(it => {
-			const childPath = transformNode(it, node, root);
+			const childPath = transformNode(it, node, root, defs);
 
 			if (childPath) {
 				const clipPathNode = childPath.clipPathNode
