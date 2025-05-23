@@ -1,0 +1,15 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1000"
+    android:viewportHeight="1000">
+  <group android:scaleX="0.2"
+      android:scaleY="0.3"
+      android:translateX="4"
+      android:translateY="5"
+			android:rotation="6"
+			android:pivotX="7"
+			android:pivotY="8">
+  </group>
+</vector>
