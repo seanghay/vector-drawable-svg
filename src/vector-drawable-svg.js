@@ -330,6 +330,7 @@ function convertHexColor(argb, opacityStr = '1') {
 	];
 }
 
+exports.convertHexColor = convertHexColor;
 
 exports.transform = function (content, options = {}) {
 	const override = options.override
